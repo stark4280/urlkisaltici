@@ -1,9 +1,10 @@
-from flask import Flask, request, jsonify, redirect, render_template
+from flask import Flask, request, jsonify, redirect, render_template, session, url_for
 import sqlite3
 import string, random
 from urllib.parse import urlparse
 
 app = Flask(__name__)
+app.secret_key = "gizli-bir-anahtar"  # Admin paneli için gerekli
 
 # Veritabanı oluştur
 def init_db():
@@ -54,6 +55,29 @@ def redirect_to_original(code):
         if row:
             return redirect(row[0])
         return "Link bulunamadı", 404
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if not session.get('admin_logged_in'):
+        if request.method == 'POST':
+            password = request.form.get('password')
+            if password == '1234':
+                session['admin_logged_in'] = True
+                return redirect(url_for('admin'))
+            else:
+                return render_template('admin_login.html', error='Hatalı şifre!')
+        return render_template('admin_login.html')
+    # Giriş başarılıysa, tüm linkleri göster
+    with sqlite3.connect("links.db") as con:
+        cur = con.cursor()
+        cur.execute("SELECT code, original FROM links")
+        links = cur.fetchall()
+    return render_template('admin_panel.html', links=links)
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('admin_logged_in', None)
+    return redirect(url_for('admin'))
 
 if __name__ == '__main__':
     init_db()
