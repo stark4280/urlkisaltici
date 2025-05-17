@@ -26,6 +26,8 @@ def home():
 def shorten():
     data = request.get_json()
     url = data.get('longUrl')
+    if not url.startswith(('http://', 'https://')):
+        url = 'http://' + url
     code = data.get('customCode') or generate_code()
 
     with sqlite3.connect("links.db") as con:
